@@ -1,8 +1,8 @@
 const express = require("express");
 const tasksRouter = require("./routes/tasks");
+const { initializeDatabase } = require("./db/database");
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -27,6 +27,17 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Todo API disponible sur http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`Todo API disponible sur http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Erreur de connexion à PostgreSQL :", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
