@@ -51,6 +51,31 @@ services:
     networks:
       - todo-network
 
+  stats-api:
+    build:
+      context: ./stats_api
+      dockerfile: Dockerfile
+
+    container_name: stats-api
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - todo-network
+
 volumes:
   todo-postgres-data:
     name: todo-postgres-data
