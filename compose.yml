@@ -1,0 +1,46 @@
+services:
+  todo-api:
+    container_name: todo-api
+    image: krishmini/todo-api:${TAG}
+
+    environment:
+      PORT: 3000
+      DB_HOST: todo-db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      todo-db:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+  todo-db:
+    container_name: todo-db
+    image: postgres:16-alpine
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - todo-db-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+volumes:
+  todo-db-data:

@@ -52,3 +52,63 @@ jobs:
           context: .
           push: true
           tags: krishmini/todo-api:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Charger la cle SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Ajouter la machine aux hotes connus
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force "$HOME\.ssh" | Out-Null
+          ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" "${{ secrets.DEPLOY_HOST }}" |
+            Out-File -Append -Encoding ascii "$HOME\.ssh\known_hosts"
+
+      - name: Copier compose.yml
+        shell: powershell
+        run: |
+          scp -P "${{ secrets.DEPLOY_PORT }}" `
+            compose.yml `
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/srv/todo/compose.yml"
+
+      - name: Deployer la nouvelle version
+        shell: powershell
+        run: |
+          ssh -p "${{ secrets.DEPLOY_PORT }}" `
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" `
+            "cd /srv/todo && TAG=${{ github.sha }} docker compose pull && TAG=${{ github.sha }} docker compose up -d"
+
+      - name: Verifier l API
+        shell: powershell
+        run: |
+          $url = "http://localhost:3002/health"
+
+          for ($i = 1; $i -le 10; $i++) {
+            try {
+              $response = Invoke-RestMethod -Uri $url -TimeoutSec 5
+
+              if ($response.status -eq "ok") {
+                Write-Host "API disponible"
+                exit 0
+              }
+            }
+            catch {
+              Write-Host "Tentative $i : API pas encore disponible"
+            }
+
+            Start-Sleep -Seconds 3
+          }
+
+          Write-Error "L API ne repond pas correctement"
+          exit 1
