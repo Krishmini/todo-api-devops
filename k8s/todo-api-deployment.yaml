@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: todo-api
+  namespace: todo
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: todo-api
+
+  template:
+    metadata:
+      labels:
+        app: todo-api
+
+    spec:
+      containers:
+        - name: todo-api
+          image: krishmini/todo-api:1.0.0
+
+          ports:
+            - containerPort: 3000
+
+          envFrom:
+            - configMapRef:
+                name: todo-config
+
+            - secretRef:
+                name: todo-secret
