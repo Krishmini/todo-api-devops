@@ -5,4 +5,3 @@ npm-debug.log*
 .DS_Store
 coverage/
 deploy_key
-deploy_key.pub
